@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        input {
+            font-size: 20px;
+            padding: 10px;
+            width: 200px;
+        }
+        button {
+            font-size: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button id="createRoomBtn">Create room</button>
+    <h2>Enter Room Code</h2>
+    <form id="roomForm">
+        <input type="text" id="roomCode" placeholder="Enter 6-digit code" maxlength="6" required>
+        <button type="submit">Join</button>
+    </form>
+
+    <script>
+        document.getElementById("roomForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent page reload
+            
+            const roomCode = document.getElementById("roomCode").value.trim();
+            if (roomCode.length === 6) {
+                window.location.href = `game.html?room=${roomCode}`; // Redirect to game
+            } else {
+                alert("Please enter a valid 6-digit room code.");
+            }
+        });
+
+        document.getElementById("createRoomBtn").addEventListener("click", () => socket.emit("createRoom"));
+    </script>
+</body>
+</html>
