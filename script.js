@@ -4,7 +4,7 @@
 import { io } from "https://cdn.socket.io/4.8.1/socket.io.esm.min.js";
 
 const backendLink = "https://tankmultiplayergame-production.up.railway.app/";
-// backendLink = 'http://localhost:8001';
+// const backendLink = 'http://localhost:8001';
 
 const socket = io(backendLink);
 let socketID;
@@ -20,68 +20,42 @@ socket.on("connect_error", (err) => {
     console.error("Connection Error:", err.message);
 });
 
-// update players Object
-socket.on("updatePlayers", (playersObject) => {
+// 1. New player connection
+socket.on("newPlayerJoined", ({socketID, x, y, angle, colorBasedSpriteCoordinates}) => {
     
-    // players = {};
+    players[socketID] = new Player(socketID, x, y, angle, colorBasedSpriteCoordinates);
+});
+
+// update players Object (only executes once after connection)
+socket.on("dataForNewPlayer", (playersObject) => {
     
-    // console.log(playersObject);
-    
+    players = {};
+
     for (const [socketID, player] of Object.entries(playersObject)) {
-        if (player.x < players[socketID].x) {
-            for (let i = 0; i < 5; i++) { 
-                player.x--;
-                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle); 
-            }
-        }
+        console.log(player);
 
-        if (player.x > players[socketID].x) {
-            for (let i = 0; i < 5; i++) { 
-                player.x++;
-                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle); 
-            }
-        }
-
-        if (player.y < players[socketID].y) {
-            for (let i = 0; i < 5; i++) { 
-                player.y--; 
-                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
-            }
-        }
-
-        if (player.x > players[socketID].x) {
-            for (let i = 0; i < 5; i++) { 
-                player.y++; 
-                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
-            }
-        }
-
-        players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
+        players[socketID] = new Player(
+            player.socketID, 
+            player.x, 
+            player.y, 
+            player.angle, 
+            player.colorBasedSpriteCoordinates
+        );
     }
     
 });
 
-// player movement
-socket.on("playerMove", (playerCoordinate) => {
-    // change coordinates
-    // console.log("PlayerCo: ", playerCoordinate);
-    
-    let { socketID, x, y, angle } = playerCoordinate;
+// Delete the disconnected player for still connected client
+socket.on("playerLeft", (socketID) => {
+    delete players[socketID];
+})
 
-    // if player does not exist, add it:
-    if (!players[socketID]) {
-        console.warn(`Player with ID ${socketID} not found! Creating new player.`);
-        players[socketID] = new Player(socketID, x, y);
-    }
-
+// The moved players are updated locally
+socket.on('otherPlayerMoved', ({socketID, x, y, angle}) => {
     players[socketID].x = x;
     players[socketID].y = y;
-    players[socketID].angle = angle;
+    players[socketID].angle = angle; 
 });
-
-
-
-
 
 const CANVAS = document.getElementById("canvas");
 const ctx = CANVAS.getContext('2d');
@@ -107,7 +81,7 @@ window.addEventListener("click", (event) => {
 });
 
 class Player {
-    constructor(socketID, x = 0, y = 0, angle = 0) {
+    constructor(socketID, x = 0, y = 0, angle = 0, colorBasedSpriteCoordinates = { tank: { x: 588, y: 0 }, barrel: { x: 834, y: 0 } } ) {
         this.socketID = socketID;
         this.x = x;
         this.y = y;
@@ -121,6 +95,7 @@ class Player {
         this.spriteHeight = 78;
         this.barrelSpriteWidth = 24;
         this.barrelSpriteHeight = 58;
+        this.colorBasedSpriteCoordinates = colorBasedSpriteCoordinates;
         
 
         this.angle = angle;
@@ -132,11 +107,15 @@ class Player {
         ctx.save();
         ctx.translate(this.x + this.width / 2, this.y + this.height / 2); // rotation pivot
         ctx.rotate(this.angle);
-        ctx.drawImage(this.image, 588, 0, this.spriteWidth, this.spriteHeight, -this.spriteWidth * 0.5, -this.spriteHeight * 0.5, this.spriteWidth, this.spriteHeight);
+        ctx.drawImage(this.image, this.colorBasedSpriteCoordinates.tank.x, this.colorBasedSpriteCoordinates.tank.y, this.spriteWidth, this.spriteHeight, -this.spriteWidth * 0.5, -this.spriteHeight * 0.5, this.spriteWidth, this.spriteHeight);
         ctx.restore();
         
         // Barrel
-        ctx.drawImage(this.image, 834, 0, 24, 58, this.x + this.barrelSpriteWidth * 0.5, this.y - this.barrelSpriteHeight * 0.5, this.barrelSpriteWidth, this.barrelSpriteHeight);
+        ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.width / 2); // rotation pivot
+        ctx.rotate(this.angle);
+        ctx.drawImage(this.image, this.colorBasedSpriteCoordinates.barrel.x, this.colorBasedSpriteCoordinates.barrel.y, 24, 58, -this.barrelSpriteWidth * 0.5, -this.barrelSpriteHeight * 0.5 - (this.width * 0.5), this.barrelSpriteWidth, this.barrelSpriteHeight);
+        ctx.restore();
     }
     update() {
         let moved = false;
@@ -168,7 +147,7 @@ class Player {
 
         if (moved) {
             // if movement detected
-            socket.emit("playerMove", { 
+            socket.emit("playerMovedLocally", { 
                 "socketID": socketID,
                 x: this.x, 
                 y: this.y,
