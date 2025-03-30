@@ -9,6 +9,8 @@ const backendLink = "https://tankmultiplayergame-production.up.railway.app/";
 const socket = io(backendLink);
 let socketID;
 
+let players = {};
+
 socket.on("connect", () => {
     socketID = socket.id;
     console.log("Connected to server, ID:", socket.id);
@@ -23,7 +25,7 @@ socket.on("updatePlayers", (playersObject) => {
     
     // players = {};
     
-    console.log(playersObject);
+    // console.log(playersObject);
     
     for (const [socketID, player] of Object.entries(playersObject)) {
         if (player.x < players[socketID].x) {
@@ -62,7 +64,7 @@ socket.on("updatePlayers", (playersObject) => {
 // player movement
 socket.on("playerMove", (playerCoordinate) => {
     // change coordinates
-    console.log("PlayerCo: ", playerCoordinate);
+    // console.log("PlayerCo: ", playerCoordinate);
     
     let { socketID, x, y, angle } = playerCoordinate;
 
@@ -77,7 +79,7 @@ socket.on("playerMove", (playerCoordinate) => {
     players[socketID].angle = angle;
 });
 
-let players = {};
+
 
 
 
