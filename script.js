@@ -21,11 +21,39 @@ socket.on("connect_error", (err) => {
 // update players Object
 socket.on("updatePlayers", (playersObject) => {
     
-    players = {};
+    // players = {};
     
     console.log(playersObject);
     
     for (const [socketID, player] of Object.entries(playersObject)) {
+        if (player.x < players[socketID].x) {
+            for (let i = 0; i < 5; i++) { 
+                player.x--;
+                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle); 
+            }
+        }
+
+        if (player.x > players[socketID].x) {
+            for (let i = 0; i < 5; i++) { 
+                player.x++;
+                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle); 
+            }
+        }
+
+        if (player.y < players[socketID].y) {
+            for (let i = 0; i < 5; i++) { 
+                player.y--; 
+                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
+            }
+        }
+
+        if (player.x > players[socketID].x) {
+            for (let i = 0; i < 5; i++) { 
+                player.y++; 
+                players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
+            }
+        }
+
         players[socketID] = new Player(player.socketID, player.x, player.y, player.angle);
     }
     
